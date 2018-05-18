@@ -1,0 +1,12 @@
+{
+  "NParticle": 50,
+  "diameter": 2.2,
+  "transMax": 0.002,
+  "compMax":  0.002,
+  "radMax":   0.002,
+  "rotMax":   0.002,
+  "maxIters": 20000,
+  "termTol":  1e-6,
+  "NNLextraDist": 0.1,
+  "NNLupdFreq": 20
+}
