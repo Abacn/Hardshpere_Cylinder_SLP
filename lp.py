@@ -1,6 +1,8 @@
-import neilist, randomconfig
 import numpy as np
+from scipy.sparse import coo_matrix
 from scipy.optimize import linprog
+import neilist, randomconfig
+from tools import pbc_dz
 
 class LPCore:
     """Linear programming core"""
@@ -22,6 +24,8 @@ class LPCore:
         for i in range(self.N):
             self.bounds.append((-parameter["radMax"], parameter["radMax"]))  # dr
         self.N_var = len(self.bounds)  # Number of variables
+        self.c_arr = np.zeros(self.N_var)
+        self.c_arr[0] = -1  # minimize -epsilon=maximize epsilon
 
     def optimize(self):
         # check r
@@ -41,10 +45,65 @@ class LPCore:
                     r_ub = self.boxNow[0] - self.coords[i, 0]
                 self.bounds[dridx_start+i] = (r_lb, r_ub)
             # set |r_i - r_j| <= 1
-            self.neigh.resetIter()
-            for iidx, jidx in self.neigh:
-                print(iidx, jidx)
-            exit(1)
+            ia = []
+            ja = []
+            ar = []
+            pac = 0
+            for i_idx in range(self.N):
+                sini = np.sin(self.coords[i_idx, 1])
+                cosi = np.cos(self.coords[i_idx, 1])
+                sqri = self.coords[i_idx, 0]*self.coords[i_idx, 0]
+                for j_idx in self.neigh.neighIdx[i_idx]:
+                    sinj = np.sin(self.coords[j_idx, 1])
+                    cosj = np.cos(self.coords[j_idx, 1])
+                    sqrj = self.coords[j_idx, 0]*self.coords[j_idx, 0]
+                    rirj = self.coords[i_idx, 0]*self.coords[j_idx, 0]
+                    dz = self.coords[i_idx, 2] - self.coords[j_idx, 2]
+                    dz = pbc_dz(dz)
+                    cefc = sqri + sqrj - 2*rirj*np.cos(self.coords[i_idx, 1] - self.coords[j_idx, 1]) + dz*dz
+                    if cefc < self.neigh.sqrNNLextraDist:
+                        # Add to inequal constraint
+                        # depsilon
+                        deps = -2*dz*dz
+                        # dtheta1, dtheta2
+                        sinsub = sini*cosj-cosi*sinj  # sin(i-j)
+                        dth1 = 2*rirj*sinsub
+                        dth2 = -dth1
+                        # dz1, dz2
+                        dz1 = 2*dz
+                        dz2 = -dz1
+                        # dr1, dr2
+                        cossub = cosi*cosj+sini*sinj  # cos(i-j)
+                        dr1 = 2*(self.coords[i_idx, 0] - self.coords[j_idx, 0]*cossub)
+                        dr2 = 2*(self.coords[j_idx, 0] - self.coords[i_idx, 0]*cossub)
+                        # add to list
+                        ia.append(pac); ja.append(0); ar.append(deps)
+                        ia.append(pac); ja.append(thetaidx_start+i_idx); ar.append(dth1)
+                        ia.append(pac); ja.append(thetaidx_start+j_idx); ar.append(dth2)
+                        ia.append(pac); ja.append(dzidx_start+i_idx); ar.append(dz1)
+                        ia.append(pac); ja.append(dzidx_start+j_idx); ar.append(dz2)
+                        ia.append(pac); ja.append(dridx_start+i_idx); ar.append(dr1)
+                        ia.append(pac); ja.append(dridx_start+j_idx); ar.append(dr2)
+                        pac += 1
+            if 0 == pac:
+                epsz = self.parameter["compMax"]
+                for rp in range(self.N):
+                    self.coords[rp, 2] *= 1 - epsz
+                self.boxNow[2] *= 1 - epsz
+            else:
+                b_ub = np.ones(pac)
+                matdim = (pac, self.N_var)
+                lpmat = coo_matrix((ar, (ia, ja)), shape=matdim)
+                rst = linprog(c=self.c_arr, A_ub=lpmat, b_ub=b_ub, bounds=self.bounds)
+                epsz = rst.fun
+                print(rst)
+
+                if epsz < self.parameter["termTol"]:
+                    break  # algorithm terminated
+                else:
+                    # update positions
+                    xs = rst.x
+                    pass
 
     def getCoords(self):
         return self.coords
