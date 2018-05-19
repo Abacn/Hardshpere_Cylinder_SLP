@@ -1,7 +1,10 @@
-from iomodule import readCoords
+import sys
+
 import numpy as np
 from mayavi import mlab
-import sys
+
+from iomodule import readCoords
+
 
 def visualize(filename):
     """Visualize the configuration"""

@@ -1,5 +1,7 @@
 import numpy as np
-from tools import pbc_dz, pbc_z, sqdistance
+
+from tools import pbc_dz, pbc_z
+
 
 def checkOverlap(idx, attempt, coords):
     """Check if the new coordinate (attempt) will cause overlap"""

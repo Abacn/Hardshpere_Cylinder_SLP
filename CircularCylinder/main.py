@@ -1,4 +1,5 @@
-import iomodule, randomconfig, lp
+import iomodule
+import lp
 
 if __name__ == '__main__':
     parameter = iomodule.readParameter()
