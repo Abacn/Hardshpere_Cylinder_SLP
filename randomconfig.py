@@ -39,6 +39,9 @@ def genconfig(parameter):
                 count = 0
                 update_zmax(boxNow)
                 continue
+            if parameter['radMax'] <= 0:
+                # all particles are confined on the boundary
+                newcoord[0] = R
             if checkOverlap(coords, newcoord, i) is None:
                 coords[i, :] = newcoord
                 ovlpflag = False

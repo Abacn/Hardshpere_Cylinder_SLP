@@ -21,8 +21,10 @@ class LPCore:
             self.bounds.append((-parameter["rotMax"], parameter["rotMax"]))  # dtheta
         for i in range(self.N):
             self.bounds.append((-parameter["transMax"], parameter["transMax"]))  # dz
-        for i in range(self.N):
-            self.bounds.append((-parameter["radMax"], parameter["radMax"]))  # dr
+        self.rOption = parameter['radMax'] > 0
+        if self.rOption:
+            for i in range(self.N):
+                self.bounds.append((-parameter["radMax"], parameter["radMax"]))  # dr
         self.N_var = len(self.bounds)  # Number of variables
         self.c_arr = np.zeros(self.N_var)
         self.c_arr[0] = -1  # minimize -epsilon=maximize epsilon
@@ -31,20 +33,22 @@ class LPCore:
         # check r
         thetaidx_start = 1
         dzidx_start = thetaidx_start + self.N
-        dridx_start = dzidx_start + self.N
-        returnstatus = 0
+        dridx_start = dzidx_start + self.N  # Only works when self.parameter['radMax'] > 0
+        returnstatus = 1
+        lpfailcount = 0
         for niter in range(self.parameter["maxIters"]):
             if niter%self.neigh.updInterval == 0:
                 # update neighbor list
                 self.neigh.genNeiList(self.coords)
-            for i in range(self.N):
-                r_ub = self.parameter["radMax"]
-                r_lb = -r_ub
-                if self.coords[i, 0] < r_ub:
-                    r_lb = -self.coords[i, 0]
-                elif self.coords[i, 0]+r_ub > self.boxNow[0]:
-                    r_ub = self.boxNow[0] - self.coords[i, 0]
-                self.bounds[dridx_start+i] = (r_lb, r_ub)
+            if self.rOption:
+                for i in range(self.N):
+                    r_ub = self.parameter["radMax"]
+                    r_lb = -r_ub
+                    if self.coords[i, 0] < r_ub:
+                        r_lb = -self.coords[i, 0]
+                    elif self.coords[i, 0]+r_ub > self.boxNow[0]:
+                        r_ub = self.boxNow[0] - self.coords[i, 0]
+                    self.bounds[dridx_start+i] = (r_lb, r_ub)
             # set |r_i - r_j| <= 1
             ia = []
             ja = []
@@ -74,18 +78,19 @@ class LPCore:
                         # dz1, dz2
                         dz2 = 2*dz
                         dz1 = -dz2
-                        # dr1, dr2
-                        cossub = cosi*cosj+sini*sinj  # cos(i-j)
-                        dr1 = -2*(self.coords[i_idx, 0] + self.coords[j_idx, 0]*cossub)
-                        dr2 = -2*(self.coords[j_idx, 0] + self.coords[i_idx, 0]*cossub)
                         # add to list
                         ia.append(pac); ja.append(0); ar.append(deps)
                         ia.append(pac); ja.append(thetaidx_start+i_idx); ar.append(dth1)
                         ia.append(pac); ja.append(thetaidx_start+j_idx); ar.append(dth2)
                         ia.append(pac); ja.append(dzidx_start+i_idx); ar.append(dz1)
                         ia.append(pac); ja.append(dzidx_start+j_idx); ar.append(dz2)
-                        ia.append(pac); ja.append(dridx_start+i_idx); ar.append(dr1)
-                        ia.append(pac); ja.append(dridx_start+j_idx); ar.append(dr2)
+                        if self.rOption:
+                            # dr1, dr2
+                            cossub = cosi * cosj + sini * sinj  # cos(i-j)
+                            dr1 = -2 * (self.coords[i_idx, 0] + self.coords[j_idx, 0] * cossub)
+                            dr2 = -2 * (self.coords[j_idx, 0] + self.coords[i_idx, 0] * cossub)
+                            ia.append(pac); ja.append(dridx_start+i_idx); ar.append(dr1)
+                            ia.append(pac); ja.append(dridx_start+j_idx); ar.append(dr2)
                         b_ub.append(cefc-1)
                         pac += 1
             if 0 == pac:
@@ -101,22 +106,28 @@ class LPCore:
 
                 if rst.status is 2:
                     fixstatus = self._tryfix()
-                    if fixstatus is 0:
+                    if fixstatus is 0 or lpfailcount > 10:
                         returnstatus = 2
                         break
                     else:
+                        lpfailcount += 1
                         continue
+                else:
+                    lpfailcount = 0
                 epsz = rst.x[0]
 
                 if epsz < self.parameter["termTol"]:
+                    returnstatus = 0
                     break  # algorithm terminated
                 else:
                     # update positions
                     rescale = 1 - epsz
                     self.boxNow[2] *= rescale
                     update_zmax(self.boxNow)
+                    if self.rOption:
+                        for i in range(self.N):
+                            self.coords[i, 0] += rst.x[dridx_start + i]
                     for i in range(self.N):
-                        self.coords[i, 0] += rst.x[dridx_start+i]
                         self.coords[i, 1] += rst.x[thetaidx_start + i]
                         self.coords[i, 2] = pbc_z(rescale*(self.coords[i, 2] + rst.x[dzidx_start + i]))
             print(rescale, self.boxNow[2])
@@ -124,7 +135,7 @@ class LPCore:
 
     def _tryfix(self):
         # trying to fix LP fail by randomly moving partcles
-        status = mcmove(self.coords, self.boxNow)
+        status = mcmove(self.coords, self.boxNow, self.rOption)
         print("Trying to fix LP failure... Conducted %d movement" % status)
         self.neigh.genNeiList(self.coords)
         return status

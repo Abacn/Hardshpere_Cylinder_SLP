@@ -4,17 +4,7 @@ import numpy as np
 
 
 def readParameter(filename='config.json'):
-    """Read in parameters from .json file
-    {
-  "NParticle": 50,        // Number of ball of a single box
-  "diameter": 2.2,        // diameter of the cylinder
-  "transMax": 0.002,   	  // translation max for sphere movements (given as fraction of largest sphere radii)
-  "compMax":  0.002,      // compression max for change in strain matrix (given as fraction of largest sphere radii)
-  "radMax":   0.002,      // maximal radial movement
-  "rotMax":   0.002,      // max change of theta
-  "maxIters": 20000,      // number of SLP steps to take before stopping
-  "termTol":  1e-6        // volume-based termination criteria over 2 runs (i.e., if volume doesn't decrease at least this amount over 2 SLP steps, terminate)
-}"""
+    """Read in parameters from .json file"""
     with open(filename) as data_file:
         data = json.load(data_file)
     return data

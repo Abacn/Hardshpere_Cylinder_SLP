@@ -1,5 +1,5 @@
 {
-  "NParticle": 50,
+  "NParticle": 12,
   "diameter": 1.2,
   "transMax": 0.002,
   "compMax":  0.002,
@@ -8,5 +8,17 @@
   "maxIters": 20000,
   "termTol":  1e-6,
   "NNLextraDist": 0.1,
-  "NNLupdFreq": 20
+  "NNLupdFreq": 20,
+  "_comment": [
+    "NParticle: number of particles;",
+    "diameter: the range of particle centers D-d",
+    "transMax: maximal translational move in one step",
+    "compMax: maximal compress move",
+    "radMax: maximal radial move. Set value <=0 then all particles are confined on the boundary",
+    "rotMax: maximal rotational move",
+    "maxIters: maximal iteration SLP steps. LPClass.optimize will return 1 if maxIters is reached",
+    "termTol: terminate criterion. SLP will terminate if the compression is below this value",
+    "NNLextraDist: the extra distance tolerated for building neighbor list",
+    "NNLupdFreq: neighbor list update frequency"
+    ]
 }

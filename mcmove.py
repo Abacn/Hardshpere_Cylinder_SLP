@@ -13,14 +13,17 @@ def checkOverlap(idx, attempt, coords):
                 return i
     return None
 
-def mcmove(coords, boxNow):
+def mcmove(coords, boxNow, rOption=True):
     """Conduct Monte Carlo move"""
     N = coords.shape[0]
     mcmax = 0.1
     count = 0
     for rp in range(1000):
         i = np.random.randint(N)
-        icoord = np.random.randint(3)
+        if rOption:
+            icoord = np.random.randint(3)
+        else:
+            icoord = np.random.randint(1, 3)
         if rp%100==99 and 0==count:
             # maximum move step too high
             mcmax /= 10
