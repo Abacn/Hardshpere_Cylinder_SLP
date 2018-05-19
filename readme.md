@@ -1,4 +1,4 @@
-# Hard spheres packings within cylinders: sequantial linear programming
+# Hard spheres packings within cylinders: sequential linear programming
 
 A (rough) python implementation.
 
@@ -28,7 +28,7 @@ Finding the dense packing structure of hard spheres in cylindrical pores by sequ
 - neilist.py : neighbor list module
 - randomconfig.py : generating random configurartion
 - tools.py : useful helper functions
-- visualize.py : visualise the particle coordinates
+- visualize.py : visualizing the particle coordinates
 
 ### Prerequisite:
 - Python (2 or 3)
