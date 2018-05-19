@@ -2,8 +2,8 @@ import numpy as np
 from scipy.sparse import coo_matrix
 from scipy.optimize import linprog
 import neilist, randomconfig
-from tools import pbc_dz
-
+from tools import pbc_dz, pbc_z, update_zmax
+from mcmove import mcmove
 class LPCore:
     """Linear programming core"""
     def __init__(self, parameter, coords=None, boxNow=None):
@@ -32,6 +32,7 @@ class LPCore:
         thetaidx_start = 1
         dzidx_start = thetaidx_start + self.N
         dridx_start = dzidx_start + self.N
+        returnstatus = 0
         for niter in range(self.parameter["maxIters"]):
             if niter%self.neigh.updInterval == 0:
                 # update neighbor list
@@ -48,6 +49,7 @@ class LPCore:
             ia = []
             ja = []
             ar = []
+            b_ub = []
             pac = 0
             for i_idx in range(self.N):
                 sini = np.sin(self.coords[i_idx, 1])
@@ -64,18 +66,18 @@ class LPCore:
                     if cefc < self.neigh.sqrNNLextraDist:
                         # Add to inequal constraint
                         # depsilon
-                        deps = -2*dz*dz
+                        deps = 2*dz*dz
                         # dtheta1, dtheta2
                         sinsub = sini*cosj-cosi*sinj  # sin(i-j)
-                        dth1 = 2*rirj*sinsub
-                        dth2 = -dth1
+                        dth2 = 2*rirj*sinsub
+                        dth1 = -dth2
                         # dz1, dz2
-                        dz1 = 2*dz
-                        dz2 = -dz1
+                        dz2 = 2*dz
+                        dz1 = -dz2
                         # dr1, dr2
                         cossub = cosi*cosj+sini*sinj  # cos(i-j)
-                        dr1 = 2*(self.coords[i_idx, 0] - self.coords[j_idx, 0]*cossub)
-                        dr2 = 2*(self.coords[j_idx, 0] - self.coords[i_idx, 0]*cossub)
+                        dr1 = -2*(self.coords[i_idx, 0] + self.coords[j_idx, 0]*cossub)
+                        dr2 = -2*(self.coords[j_idx, 0] + self.coords[i_idx, 0]*cossub)
                         # add to list
                         ia.append(pac); ja.append(0); ar.append(deps)
                         ia.append(pac); ja.append(thetaidx_start+i_idx); ar.append(dth1)
@@ -84,26 +86,48 @@ class LPCore:
                         ia.append(pac); ja.append(dzidx_start+j_idx); ar.append(dz2)
                         ia.append(pac); ja.append(dridx_start+i_idx); ar.append(dr1)
                         ia.append(pac); ja.append(dridx_start+j_idx); ar.append(dr2)
+                        b_ub.append(cefc-1)
                         pac += 1
             if 0 == pac:
                 epsz = self.parameter["compMax"]
+                rescale = 1 - epsz
                 for rp in range(self.N):
-                    self.coords[rp, 2] *= 1 - epsz
+                    self.coords[rp, 2] *= rescale
                 self.boxNow[2] *= 1 - epsz
             else:
-                b_ub = np.ones(pac)
                 matdim = (pac, self.N_var)
                 lpmat = coo_matrix((ar, (ia, ja)), shape=matdim)
-                rst = linprog(c=self.c_arr, A_ub=lpmat, b_ub=b_ub, bounds=self.bounds)
-                epsz = rst.fun
-                print(rst)
+                rst = linprog(c=self.c_arr, A_ub=lpmat.toarray(), b_ub=b_ub, bounds=self.bounds)
+
+                if rst.status is 2:
+                    fixstatus = self._tryfix()
+                    if fixstatus is 0:
+                        returnstatus = 2
+                        break
+                    else:
+                        continue
+                epsz = rst.x[0]
 
                 if epsz < self.parameter["termTol"]:
                     break  # algorithm terminated
                 else:
                     # update positions
-                    xs = rst.x
-                    pass
+                    rescale = 1 - epsz
+                    self.boxNow[2] *= rescale
+                    update_zmax(self.boxNow)
+                    for i in range(self.N):
+                        self.coords[i, 0] += rst.x[dridx_start+i]
+                        self.coords[i, 1] += rst.x[thetaidx_start + i]
+                        self.coords[i, 2] = pbc_z(rescale*(self.coords[i, 2] + rst.x[dzidx_start + i]))
+            print(rescale, self.boxNow[2])
+        return returnstatus
+
+    def _tryfix(self):
+        # trying to fix LP fail by randomly moving partcles
+        status = mcmove(self.coords, self.boxNow)
+        print("Trying to fix LP failure... Conducted %d movement" % status)
+        self.neigh.genNeiList(self.coords)
+        return status
 
     def getCoords(self):
         return self.coords

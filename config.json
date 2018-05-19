@@ -1,6 +1,6 @@
 {
   "NParticle": 50,
-  "diameter": 2.2,
+  "diameter": 1.2,
   "transMax": 0.002,
   "compMax":  0.002,
   "radMax":   0.002,

@@ -1,6 +1,7 @@
 from iomodule import readCoords
 import numpy as np
 from mayavi import mlab
+import sys
 
 def visualize(filename):
     """Visualize the configuration"""
@@ -14,4 +15,8 @@ def visualize(filename):
 
 
 if __name__ == '__main__':
-    visualize('testInitialConfig.dat')
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = 'testInitialConfig.dat'
+    visualize(filename)

@@ -21,7 +21,7 @@ class NeiList:
         # parameters for neighborlist is optional
         if "NNLextraDist" not in parameter:
             self.parameter["NNLextraDist"] = 0.1
-        self.sqrNNLextraDist = self.parameter["NNLextraDist"]*self.parameter["NNLextraDist"]
+        self.sqrNNLextraDist = (1+self.parameter["NNLextraDist"])*(1+self.parameter["NNLextraDist"])
         if "NNLupdFreq" not in parameter:
             self.parameter["NNLupdFreq"] = 20
         self.updInterval = self.parameter["NNLupdFreq"]
