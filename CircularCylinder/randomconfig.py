@@ -18,7 +18,7 @@ def checkOverlap(coords, newcoord, idx):
 def genconfig(parameter):
     """Generate random configuration by given parameters"""
     N = parameter['NParticle']
-    R = parameter['diameter']/2
+    R = parameter['diameter']/2.0
     zstep = 5.0    # the box size increases zstep if overlap happens too much
     boxOrigin = np.array([R, 2*np.pi, zstep])
     boxNow = np.array(boxOrigin)
@@ -46,6 +46,7 @@ def genconfig(parameter):
                 ovlpflag = False
             else:
                 count += 1
+    boxNow[1] = R
     return coords, boxNow
 
 

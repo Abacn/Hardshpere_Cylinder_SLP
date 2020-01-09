@@ -34,5 +34,13 @@ def sqdistance(cor1, cor2, parameter, dz=None):
     if dz is None:
         dz = cor1[2]-cor2[2]
         dz = pbc_dz(dz)
-    d = cor1[0]*cor1[0] + cor2[0]*cor2[0] - 2*cor1[0]*cor2[0]*np.cos(cor1[1]-cor2[1]) + dz*dz
+    if parameter["radMax"] > 0:
+        # general case
+        dx = parameter["Ra"]*(cor1[0]*np.cos(cor1[1]) - cor2[0]*np.cos(cor2[1]))
+        dy = parameter["Rb"]*(cor1[0]*np.sin(cor1[1]) - cor2[0]*np.sin(cor2[1]))
+    else:
+        # balls one tha boundary of the ellipse
+        dx = parameter["Ra"]*(np.cos(cor1[1]) - np.cos(cor2[1]))
+        dy = parameter["Rb"]*(np.sin(cor1[1]) - np.sin(cor2[1]))
+    d = dx*dx + dy*dy + dz*dz
     return d

@@ -3,23 +3,26 @@ import numpy as np
 from tools import pbc_dz, pbc_z
 
 
-def checkOverlap(idx, attempt, coords):
+def checkOverlap(idx, attempt, boxNow, coords, sqdiam):
     """Check if the new coordinate (attempt) will cause overlap"""
     for i in range(coords.shape[0]):
         if idx == i: continue
+        dx = attempt[0]*np.cos(attempt[1])*boxNow[0] - coords[i, 0]*np.cos(coords[i, 1])*boxNow[0]
+        dy = attempt[0]*np.sin(attempt[1])*boxNow[1] - coords[i, 0]*np.sin(coords[i, 1])*boxNow[1]
         dz = attempt[2] - coords[i, 2]
         dz = pbc_dz(dz)
-        if np.abs(dz) < 1:
-            sqrd = attempt[0]*attempt[0] + coords[i, 0]*coords[i, 0] - 2*attempt[0]*coords[i, 0]*np.cos(attempt[1]-coords[i, 1]) + dz*dz
-            if sqrd < 1:
+        if dz*dz < sqdiam:
+            sqrd = dx*dx + dy*dy + dz*dz
+            if sqrd < sqdiam:
                 return i
     return None
 
-def mcmove(coords, boxNow, rOption=True):
+def mcmove(coords, boxNow, rOption=True, diameter=1.0):
     """Conduct Monte Carlo move"""
     N = coords.shape[0]
     mcmax = 0.1
     count = 0
+    sqdiam = diameter*diameter
     for rp in range(1000):
         i = np.random.randint(N)
         if rOption:
@@ -39,7 +42,7 @@ def mcmove(coords, boxNow, rOption=True):
                 attempt[0] = 2*boxNow[0] - attempt[0]
         elif icoord == 2:  # changing z need to check PBC
             attempt[2] = pbc_z(attempt[2])
-        status = checkOverlap(i, attempt, coords)
+        status = checkOverlap(i, attempt, boxNow, coords, sqdiam)
         if status is None:
             # conduct movement
             coords[i, icoord] = attempt[icoord]

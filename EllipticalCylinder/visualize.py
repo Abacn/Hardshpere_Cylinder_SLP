@@ -8,12 +8,12 @@ from iomodule import readCoords
 
 def visualize(filename):
     """Visualize the configuration"""
-    coords, boxNow = readCoords(filename)
-    xs = coords[:, 0] * np.cos(coords[:, 1])
-    ys = coords[:, 0] * np.sin(coords[:, 1])
+    coords, boxNow, diameter = readCoords(filename)
+    xs = boxNow[0]*coords[:, 0]*np.cos(coords[:, 1])
+    ys = boxNow[1]*coords[:, 0] * np.sin(coords[:, 1])
     zs = coords[:, 2]
     for x, y, z in zip(xs, ys, zs):
-        mlab.points3d(x, y, z, resolution=100, color=(0.3, 0.3, 1))
+        mlab.points3d(x, y, z, scale_factor=diameter, resolution=100, color=(0.3, 0.3, 1))
     mlab.show()
 
 

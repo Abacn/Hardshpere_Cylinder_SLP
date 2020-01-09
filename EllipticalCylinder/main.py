@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parameter = iomodule.readParameter()
     for i in range(repeatrun):
         lpobj = lp.LPCore(parameter)
-        iomodule.writeCoords(lpobj.coords, lpobj.boxNow, default_initfile%(i))
+        iomodule.writeCoords(lpobj.coords, lpobj.boxNow, lpobj.diam, default_initfile%(i))
         # print parameters
         for k in parameter:
             if not k.startswith('_'):
@@ -34,4 +34,4 @@ if __name__ == '__main__':
         print("Optimization begin")
         status = lpobj.optimize()
         print("Optimization ended code ", status)
-        iomodule.writeCoords(lpobj.coords, lpobj.boxNow, default_finalfile%(i))
+        iomodule.writeCoords(lpobj.coords, lpobj.boxNow, lpobj.diam, default_finalfile%(i))
